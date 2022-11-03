@@ -226,70 +226,77 @@ cW-Wert: %cW")}),
     end Zahnrad;
 
     model Tank
-    
     // Konstanten
     constant Modelica.Units.SI.Acceleration g = Modelica.Constants.g_n;
     constant Real roh = 1000 "Dichte von Wasser";
-    
     // Parameter
     parameter Modelica.Units.SI.Pressure p_e = 1.013*10^5 "Umgebungsdruck in bar";
     parameter Modelica.Units.SI.Area A = 0.1 "Fläche der Zylinders";
     parameter Modelica.Units.SI.Area At = 0.01 "Fläche der Öffnung"; 
-    
-    // Variablen
+// Variablen
     Modelica.Units.SI.Distance h "Höhendifferenz";
     Modelica.Units.SI.Pressure p_a "Umgebungsdruck";
+    Modelica.Units.SI.Velocity v_t "Geschwindigkeit Tank";
+    Modelica.Units.SI.Acceleration a_t "Beschleunigung Tank";
     Real V (start = 1) "Tankvolumen";
     Real c;
     Real V_t;
+    Real m;
+    
+    
+    Connectoren.Translatoric translatoric_tank annotation(
+        Placement(visible = true, transformation(origin = {0, 0}, extent = {{-10, -10}, {10, 10}}, rotation = 0), iconTransformation(origin = {0, 0}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
     
     // Gleichungen
-    equation
-    // Druckausgleich
-    p_e = p_a;
-    // Austrittsgeschwindigkeit
-    c = sqrt(2 * g * h);
-    // Füllvolumen
-    V = A * h;
-    // Volumenstrom
-    der(V) = -V_t;
-    // Volumenstrom
-    V_t = c * At;
+equation
+// Druckausgleich
+      p_e = p_a;
+// Austrittsgeschwindigkeit
+      c = sqrt(2 * g * h);
+// Füllvolumen
+      V = A * h;
+// Volumenstrom
+      der(V) = -V_t;
+// Volumenstrom
+      V_t = c * At;
+    // Masse Tank
+      translatoric_tank.F = V * roh * g;
+    // Weg Tank
+      a_t = der(v_t);
+      v_t = der(translatoric_tank.s)
     
     annotation(
-        Icon(graphics = {Rectangle(origin = {0, 20}, fillPattern = FillPattern.Solid, extent = {{-40, -60}, {40, 60}})}));end Tank;
+        Icon(graphics = {Rectangle(origin = {0, 20}, fillPattern = FillPattern.Solid, extent = {{-40, -60}, {40, 60}})}));
+    
+    end Tank;
     
     model Tank_Test
-    
     // Konstanten
     constant Modelica.Units.SI.Acceleration g = Modelica.Constants.g_n;
     constant Real roh = 1000 "Dichte von Wasser";
-    
     // Parameter
     parameter Modelica.Units.SI.Pressure p_e = 1.013*10^5 "Umgebungsdruck in bar";
     parameter Modelica.Units.SI.Area A = 0.1 "Fläche der Zylinders";
     parameter Modelica.Units.SI.Area At = 0.01 "Fläche der Öffnung"; 
-    
-    // Variablen
+// Variablen
     Modelica.Units.SI.Distance h "Höhendifferenz";
     Modelica.Units.SI.Pressure p_a "Umgebungsdruck";
     Real V (start = 1) "Tankvolumen";
     Real c;
     Real V_t;
-    
     // Gleichungen
-    equation
-    // Druckausgleich
-    p_e = p_a;
-    // Austrittsgeschwindigkeit
-    c = sqrt(2 * g * h);
-    // Füllvolumen
-    V = A * h;
-    // Volumenstrom
-    der(V) = -V_t;
-    // Volumenstrom
-    V_t = c * At;
-    
+
+equation
+// Druckausgleich
+      p_e = p_a;
+// Austrittsgeschwindigkeit
+      c = sqrt(2 * g * h);
+// Füllvolumen
+      V = A * h;
+// Volumenstrom
+      der(V) = -V_t;
+// Volumenstrom
+      V_t = c * At;
     annotation(
         Icon(graphics = {Rectangle(origin = {0, 20}, fillPattern = FillPattern.Solid, extent = {{-40, -60}, {40, 60}})}));end Tank_Test;
   end Hilfsmodelle;
@@ -311,7 +318,7 @@ cW-Wert: %cW")}),
 
     connector Fluid
     
-      Modelica.Units.SI.Pressure w_t;     // Strömujngsgeschwindigkeit
+      Modelica.Units.SI.Pressure w_t;           // Strömujngsgeschwindigkeit
       flow Real V_t;                      // Volumenstrom
     
       annotation(
@@ -320,7 +327,7 @@ cW-Wert: %cW")}),
   end Connectoren;
 
   package Arbeitsgeraete
-    model Masse
+  model Masse
       // Konstanten
       // Parameter
       parameter Modelica.Units.SI.Mass m = 5000 "Masse in kg";
@@ -357,6 +364,112 @@ cW-Wert: %cW")}),
         Line(points = {{44, 0}, {80, 0}, {80, 66}, {16, 66}}));
     annotation(
         Icon(graphics = {Text(extent = {{-100, 100}, {100, -100}}, textString = "D", fontSize = 150)}));end Duengerverteiler;
+
+    model Anhaenger
+    
+        //Parameter
+        parameter Modelica.Units.SI.Mass a_masse = 2895 "Anhänger Masse in kg";
+        parameter Modelica.Units.SI.Mass gr_masse = 5500 "Granulat Masse in kg";
+        parameter Modelica.Units.SI.Mass Ent_masse = 10 "Entlassungsmasse der Granulaten/sek";
+        parameter Real cW = 0.95 "Luftwiederstandsbeiwert";
+        parameter Modelica.Units.SI.Area A_F = 15 "Fläche Anhänger";
+        parameter Modelica.Units.SI.Area T_F = 10 "Fläche Traktor";
+        constant Modelica.Units.SI.Density dichte = 1.204 "Dichte von Luft bei 20°C und 1,013 bar";
+        
+        //Variable
+        Modelica.Units.SI.Acceleration a "Translatorische Beschleunigung in horizontale";
+        Modelica.Units.SI.Velocity v "Translatorische Geschwindigkeit in horizontale";
+        Modelica.Units.SI.Force F_Luft "Luftwiderstand bei der Bewegung";
+        
+        //Klasse
+        Arbeitsgeraete.AnhaengerZustand zustand(anhaenger_masse = a_masse,granulat_masse = gr_masse,entlassungs_masse = Ent_masse,     
+        istbefuellt = true);
+        
+        //Connectoren
+        Landwirtschaft.Connectoren.Translatoric anhaenger_kupplung annotation(
+          Placement(visible = true, transformation(extent = {{0, 0}, {0, 0}}, rotation = 0), iconTransformation(origin = {-91, 11}, extent = {{-7, -7}, {7, 7}}, rotation = 0)));
+        Landwirtschaft.Connectoren.Translatoric translatoric_radlager annotation(
+          Placement(visible = true, transformation(origin = {46, -18}, extent = {{-10, -10}, {10, 10}}, rotation = 0), iconTransformation(origin = {46, -16}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
+     
+        // Gleichungen
+        equation
+        F_Luft = 0.5 * cW * A_F * dichte * v ^ 2;
+        zustand.gesamte_anhaenger_masse * a = translatoric_radlager.F + anhaenger_kupplung.F - F_Luft;
+        der(v) = a;
+        der(anhaenger_kupplung.s) = v;
+        translatoric_radlager.s = anhaenger_kupplung.s;
+        //Beschreibung
+        annotation(
+            Icon(graphics = {Rectangle(origin = {-67, 10}, extent = {{-25, 2}, {25, -2}}), Ellipse(origin = {46, -13}, pattern = LinePattern.Dash, extent = {{-14, 15}, {14, -15}}), Ellipse(origin = {48, 33}, pattern = LinePattern.Dash, extent = {{-14, 15}, {14, -15}}), Ellipse(origin = {-20, -11}, pattern = LinePattern.Dash, extent = {{-14, 15}, {14, -15}}), Polygon(origin = {14, 7}, fillColor = {98, 98, 98}, pattern = LinePattern.Dash, fillPattern = FillPattern.Horizontal, points = {{-50, 19}, {48, 19}, {70, 39}, {70, -41}, {48, -21}, {-50, -21}, {-70, -41}, {-70, 41}, {-50, 19}}), Ellipse(origin = {-20, 33}, pattern = LinePattern.Dash, extent = {{-14, 15}, {14, -15}}), Polygon(origin = {22, 12}, fillColor = {24, 24, 24}, fillPattern = FillPattern.Solid, points = {{-34, 30}, {74, 30}, {38, -30}, {-64, -30}, {-66, 30}, {-66, 30}, {-34, 30}}), Text(origin = {14, 15}, lineColor = {255, 255, 255}, extent = {{-32, 7}, {32, -7}}, textString = "Behälter"), Text(origin = {83, -8}, lineColor = {255, 0, 0}, extent = {{-23, 6}, {23, -6}}, textString = "chassis"), Text(origin = {14, 15}, lineColor = {255, 255, 255}, extent = {{-32, 7}, {32, -7}}, textString = "Behälter"), Text(origin = {14, 15}, lineColor = {255, 255, 255}, extent = {{-32, 7}, {32, -7}}, textString = "Behälter"), Text(origin = {50, -31}, extent = {{-12, -5}, {12, 5}}, textString = "Radlager"), Text(origin = {-90, -1}, extent = {{-32, 7}, {32, -7}}, textString = "Anhängerkopplung")}));
+    end Anhaenger;
+
+    model Anhaenger_Rad
+    
+      //Konstanten
+      constant Modelica.Units.SI.Acceleration g =Modelica.Constants.g_n "Erdbeschleunigung";
+      constant Real reibungskoeff = 0.45 "Reibungskoeffizient sowohl auf dem Erdweg als auch auf dem Ackerboden";
+      
+      //Parameter
+      parameter Modelica.Units.SI.Mass m = 284.36 "Rad Masse";
+      parameter Modelica.Units.SI.Inertia J = 0.5 * m * r ^ 2 "Massenträgheit";
+      parameter Modelica.Units.SI.Length r = 0.8985 "Radius Radmitte - Rollfläche";
+      
+      //Variablen
+      Modelica.Units.SI.AngularVelocity omega "Winkelgeschwindigkeit Rad";
+      Modelica.Units.SI.Force F_roll "Rollreibungskraft";
+      
+      //Connectoren
+      Landwirtschaft.Connectoren.Translatoric radlager annotation(
+        Placement(visible = true, transformation(origin = {0, 4}, extent = {{-10, -10}, {10, 10}}, rotation = 0), iconTransformation(origin = {-80, 10}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
+      Modelica.Blocks.Interfaces.RealOutput vehicle_vel annotation(
+        Placement(visible = true, transformation(origin = {-16, -8}, extent = {{-10, -10}, {10, 10}}, rotation = 0), iconTransformation(origin = {-74, -40}, extent = {{-10, -10}, {10, 10}}, rotation = 180)));
+      Landwirtschaft.Connectoren.Rotatoric radwelle annotation(
+        Placement(visible = true, transformation(extent = {{0, 0}, {0, 0}}, rotation = 0), iconTransformation(origin = {-80, -8}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
+      
+      equation
+      vehicle_vel = der(radlager.s);
+      //F_roll = reibungskoeff * m * g;
+      if vehicle_vel > 0 then
+        F_roll = reibungskoeff * m * g;
+      else
+        F_roll = 0;
+      end if;
+      J * der(omega) = radwelle.M - radlager.F * r - F_roll*r;
+      omega = der(radwelle.alpha);
+      radwelle.alpha = radlager.s / r;
+     
+      annotation(
+        Icon(graphics = {Ellipse(origin = {4, 16}, fillPattern = FillPattern.Solid, extent = {{-38, 38}, {38, -38}}), Ellipse(origin = {5, 16}, fillColor = {134, 134, 134}, fillPattern = FillPattern.Solid, extent = {{29, -30}, {-29, 30}}), Polygon(origin = {-13, -12}, fillColor = {139, 139, 139}, fillPattern = FillPattern.Solid, points = {{11, 30}, {-19, -24}, {-9, -32}, {23, 24}, {11, 30}}), Ellipse(origin = {-26, -35}, fillColor = {113, 113, 113}, fillPattern = FillPattern.Solid, extent = {{-6, 17}, {6, -17}}), Ellipse(origin = {4, 15}, fillColor = {115, 115, 115}, fillPattern = FillPattern.Solid, extent = {{-6, 17}, {6, -17}}), Line(origin = {5, 18}, points = {{-29, 0}, {29, 0}}, color = {255, 255, 255}), Line(origin = {5, 16}, points = {{1, 30}, {-1, -30}}, color = {255, 255, 255}), Line(origin = {5, 17}, points = {{-19, 23}, {19, -23}}, color = {255, 255, 255}), Line(origin = {4, 17}, points = {{22, 19}, {-22, -19}}, color = {255, 255, 255}), Text(origin = {-54, -9}, extent = {{-24, 5}, {24, -5}}, textString = "Radwelle"), Text(origin = {-55, 10}, extent = {{-15, 6}, {15, -6}}, textString = "Radlager")}));
+    end Anhaenger_Rad;
+
+    class AnhaengerZustand
+    
+      //Parameter
+      parameter Modelica.Units.SI.Mass anhaenger_masse = 2895 "Anhänger Masse in kg";
+      parameter Modelica.Units.SI.Mass granulat_masse = 5500 "Granulat Masse in kg";
+      parameter Modelica.Units.SI.Mass entlassungs_masse = 10 "Entlassungsmasse der Granulaten/sek";
+      parameter Boolean istbefuellt = true "gibt an ob der Anhänger mit Granulaten befüllt ist";
+    
+      //Variable
+      Modelica.Units.SI.Mass gesamte_anhaenger_masse;
+      Real b "Konstante b der linearen Funktion" ;
+      Real k "Steigung der linearen Funktion"; // m = k*t + b
+      Real gesamte_zeit "notwendige Zeit bis alle Granulate entlassen werden";
+      Real t(start=0) "time";
+    
+      //Gleichungen
+      equation
+      if istbefuellt then
+       gesamte_zeit = granulat_masse / entlassungs_masse;
+       b = anhaenger_masse + granulat_masse;
+       k = (anhaenger_masse - b) / gesamte_zeit;
+       der(t) = if t>=gesamte_zeit then 0 else 1;
+       gesamte_anhaenger_masse = k*t+b;
+      else
+        gesamte_anhaenger_masse = anhaenger_masse;
+      end if;
+     
+      end AnhaengerZustand;
   end Arbeitsgeraete;
 
   package Zugmaschinen
@@ -703,8 +816,53 @@ cW-Wert: %cW")}),
     end Simulation_Tank;
     
     model Simulation_FirstRunningPrototyp
+    Landwirtschaft.Zugmaschinen.Traktor traktor annotation(
+        Placement(visible = true, transformation(origin = {-14, 2}, extent = {{-40, -40}, {40, 40}}, rotation = 0)));
+  Modelica.Blocks.Sources.Step step(height = 11)  annotation(
+        Placement(visible = true, transformation(origin = {-82, 48}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
+  Modelica.Blocks.Sources.BooleanStep booleanStep annotation(
+        Placement(visible = true, transformation(origin = {-84, 10}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
+  Modelica.Blocks.Sources.BooleanStep booleanStep1 annotation(
+        Placement(visible = true, transformation(origin = {-84, -24}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
+  Modelica.Blocks.Sources.BooleanStep booleanStep2 annotation(
+        Placement(visible = true, transformation(origin = {-82, -58}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
+  Landwirtschaft.Arbeitsgeraete.Anhaenger anhaenger annotation(
+        Placement(visible = true, transformation(origin = {105, -3}, extent = {{-51, -51}, {51, 51}}, rotation = 0)));
+  Landwirtschaft.Arbeitsgeraete.Anhaenger_Rad anhaenger_Rad annotation(
+        Placement(visible = true, transformation(origin = {122, -56}, extent = {{-40, -40}, {40, 40}}, rotation = 0)));
+  Landwirtschaft.Hilfsmodelle.Kegelradgetriebe kegelradgetriebe annotation(
+        Placement(visible = true, transformation(origin = {75, 57}, extent = {{-23, -23}, {23, 23}}, rotation = 0)));
+  Landwirtschaft.Hilfsmodelle.Zahnrad zahnrad annotation(
+        Placement(visible = true, transformation(origin = {130, 52}, extent = {{-24, -24}, {24, 24}}, rotation = 0)));
+  Landwirtschaft.Hilfsmodelle.Drehscheibe drehscheibe1 annotation(
+        Placement(visible = true, transformation(origin = {131, 85}, extent = {{-19, -19}, {19, 19}}, rotation = 0)));
+  Landwirtschaft.Hilfsmodelle.Drehscheibe drehscheibe2 annotation(
+        Placement(visible = true, transformation(origin = {171, 59}, extent = {{-23, -23}, {23, 23}}, rotation = 0)));
+  Landwirtschaft.Hilfsmodelle.Tank tank annotation(
+        Placement(visible = true, transformation(origin = {1, 65}, extent = {{-17, -17}, {17, 17}}, rotation = 0)));
     equation
-    
+      connect(step.y, traktor.vel_Setpoint) annotation(
+        Line(points = {{-70, 48}, {-62, 48}, {-62, 28}, {-52, 28}}, color = {0, 0, 127}));
+  connect(booleanStep.y, traktor.Zapfwellensignal) annotation(
+        Line(points = {{-72, 10}, {-64, 10}, {-64, 18}, {-52, 18}}, color = {255, 0, 255}));
+  connect(booleanStep1.y, traktor.Batterieschalter) annotation(
+        Line(points = {{-72, -24}, {-66, -24}, {-66, 12}, {-52, 12}}, color = {255, 0, 255}));
+  connect(booleanStep2.y, traktor.Steuersingal_Input) annotation(
+        Line(points = {{-70, -58}, {-60, -58}, {-60, 6}, {-52, 6}}, color = {255, 0, 255}));
+  connect(traktor.anhaengerkupplung, anhaenger.anhaenger_kupplung) annotation(
+        Line(points = {{20, 12}, {34, 12}, {34, 2}, {58, 2}}));
+  connect(anhaenger_Rad.radlager, anhaenger.translatoric_radlager) annotation(
+        Line(points = {{90, -52}, {90, -26}, {128, -26}, {128, -12}}));
+  connect(traktor.zapfwelle, kegelradgetriebe.K_Antriebsseite) annotation(
+        Line(points = {{20, 8}, {36, 8}, {36, 48}, {56, 48}}));
+  connect(kegelradgetriebe.K_Abtriebsseite, zahnrad.Z_Antriebsseite) annotation(
+        Line(points = {{80, 70}, {104.5, 70}, {104.5, 52}, {125, 52}}));
+  connect(kegelradgetriebe.K_Abtriebsseite, drehscheibe1.D_Abtriebsseite) annotation(
+        Line(points = {{80, 70}, {78, 70}, {78, 86}, {132, 86}}));
+  connect(zahnrad.Z_Abtriebsseite, drehscheibe2.D_Abtriebsseite) annotation(
+        Line(points = {{134, 52}, {172, 52}, {172, 60}}));
+  connect(tank.translatoric_tank, traktor.anhaengerkupplung) annotation(
+        Line(points = {{1, 65}, {28, 65}, {28, 12}, {20, 12}}));
     protected
       annotation(
         Icon(graphics = {Text(extent = {{-100, 100}, {100, -100}}, textString = "S", fontSize = 150)}));
